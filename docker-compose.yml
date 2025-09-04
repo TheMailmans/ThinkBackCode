@@ -1,0 +1,54 @@
+version: '3.8'
+
+services:
+  thinkbackcode:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: thinkbackcode-app
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - NEXT_TELEMETRY_DISABLED=1
+      # Add your environment variables here
+      # - OPENAI_API_KEY=${OPENAI_API_KEY}
+      # - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+    volumes:
+      # Optional: Mount a volume for persistent data
+      - thinkbackcode-data:/app/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - thinkbackcode-network
+
+  # Optional: Add a reverse proxy (nginx)
+  nginx:
+    image: nginx:alpine
+    container_name: thinkbackcode-nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./ssl:/etc/nginx/ssl:ro
+    depends_on:
+      - thinkbackcode
+    restart: unless-stopped
+    networks:
+      - thinkbackcode-network
+    profiles:
+      - with-nginx
+
+volumes:
+  thinkbackcode-data:
+    driver: local
+
+networks:
+  thinkbackcode-network:
+    driver: bridge
